@@ -1,0 +1,81 @@
+
+
+
+// 1. Créer une base de données « scolarite ».
+const database = 'scolarite';
+use(database);
+
+
+// 2. Créer une collection « etudiants » dans votre base de données.
+const collection = 'etudiants';
+db.createCollection(collection);
+
+
+// 3. Ajouter trois documents dans votre collection avec les champs id, nom, prenom, adresse, ville et intérêts.
+// Certains contiendront un champ telephone et d’autres un champ courriel.
+// Un étudiant peut avoir un ou plusieurs intérêts (musique, hockey, lecture, …).
+db.etudiants.insertMany([
+    {"_id": 1, "nom": "Tremblay", "prenom": "Gabriel", "adresse": "555 rue Scott", "ville": "Québec", "interet": ["hockey", "musique"], "courriel": "gabriel@csfoy.ca"},
+    {"_id": 2, "nom": "Bergeron-Larose", "prenom": "Raphael", "adresse": "435 rue Martes", "ville": "Québec", "interet": ["ski", "voiture"], "telephone": "333-3333"},
+    {"_id": 3, "nom": "Julien", "prenom": "Olivier", "adresse": "231 rue Ste-Foy", "ville": "Québec", "interet": ["programmation", "finance"]}
+])
+
+
+// 4. Afficher le nom et le prénom seulement des étudiants qui résident à Québec. Ajoutez-en au besoin.
+const database = 'scolarite';
+use(database);
+db.etudiants.find({"ville": "Québec"}, {"nom": true, "prenom": true, "_id": false});
+
+
+// 5. Afficher tous les étudiants qui aiment soit le soccer ou le hockey.
+const database = 'scolarite';
+use(database);
+db.etudiants.find(
+    {"interet":
+        {$in:["hockey", "soccer"]}
+    }
+);
+
+
+// 6. Un des étudiants qui ont des numéros de téléphone a changé le sien pour « 418-652-3333 ».
+// Modifier le document correspondant (choisissez un étudiant dont le nom et le prénom sont connus).
+const database = 'scolarite';
+use(database);
+db.etudiants.update(
+    {"prenom": "Raphael", "nom": "Bergeron-Larose"},
+    {$set: {"telephone": "418-652-3333"}},
+    {upsert: true, multi: false}
+);
+
+const database = 'scolarite';
+use(database);
+db.etudiants.find(
+    {"prenom": "Raphael"}
+);
+
+
+// 7. Supprimer le document relatif à l’étudiant qui habite Ottawa. Ajoutez-en au besoin.
+const database = 'scolarite';
+use(database);
+db.etudiants.insertOne(
+    {"_id": 4, "nom": "Perron", "prenom": "Mike", "adresse": "5235 rue Price", "ville": "Ottawa", "interet": ["dance", "art"], "courriel": "mike@csfoy.ca"}
+);
+
+const database = 'scolarite';
+use(database);
+db.etudiants.remove({"ville": "Ottawa"});
+
+
+// 8. Afficher les étudiants dont le nom contient la lettre « a » et qui ont un email de défini.
+const database = 'scolarite';
+use(database);
+db.etudiants.find(
+    {"courriel": {$exists: true}, "nom": {$regex: /a/i}}
+);
+
+
+// 9. Afficher le nombre d’étudiants qui aiment la musique.
+// Vous devrez trouver la commande pour compter car nous ne l’avons pas vu.
+const database = 'scolarite';
+use(database);
+db.etudiants.find({"interet": "musique"}).count();

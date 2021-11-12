@@ -1,0 +1,121 @@
+// 1. Créez quelques enregistrements
+const collection = 'produit';
+db.createCollection(collection);
+
+db.produit.remove({});
+db.produit.insertMany([
+    {"_id": 1,
+     "nom": "lampe",
+     "prix": 150,
+     "critiques": [{"utilisateur": "kristopher", "commentaire": "Bonne lampe", "cote": 15},
+                   {"utilisateur": "maxime", "commentaire": "Mauvaise lampe", "cote": 1},
+                   {"utilisateur": "Karen", "commentaire": "La lumière n'est pas assez forte", "cote": 3}]
+    },
+
+    {"_id": 2,
+     "nom": "rideaux",
+     "prix": 100,
+     "critiques": [{"utilisateur": "nicolas", "commentaire": "Laisse passer la lumière", "cote": 1},
+                   {"utilisateur": "maxence", "commentaire": "Toujours brisés", "cote": 2}]
+    },
+
+    {"_id": 3,
+     "nom": "savon",
+     "prix": 5,
+     "critiques": [{"utilisateur": "kristopher", "commentaire": "Lave bien", "cote": 7},
+                   {"utilisateur": "olivier", "commentaire": "Doux pour la peau", "cote": 4}]
+    },
+
+    {"_id": 4,
+     "nom": "bbq",
+     "prix": 500,
+     "critiques": [{"utilisateur": "olivier", "commentaire": "Fait de bon ribs", "cote": 6},
+                   {"utilisateur": "samuel", "commentaire": "Toujours brisé et pas de garantie", "cote": 2}]
+    },
+
+    {"_id": 5,
+     "nom": "balais",
+     "prix": 25,
+     "critiques": [{"utilisateur": "simon", "commentaire": "Fait la job", "cote": 3},
+                   {"utilisateur": "annie", "commentaire": "Excellent balais", "cote": 8}]
+    },
+
+    {"_id": 6,
+     "nom": "valise",
+     "prix": 90,
+     "critiques": [{"utilisateur": "sofia", "commentaire": "Bon volume", "cote": 4},
+                   {"utilisateur": "annie", "commentaire": "valise trop lourde", "cote": 2}]
+    },
+]);
+
+
+
+// 2. Écrivez une requête qui trouve tous les produits qui coûtent moins de 15$ et qui ont
+// une cote de 5 ou plus (pas la moyenne des cotes).
+db.produit.aggregate(
+    {
+        $match:
+        {
+            $and: [{"prix": {$lt: 15}}, {"critiques.cote": {$gte: 5}}]
+        }
+    }
+);
+
+
+// 3. Écrivez une requête qui calcule la moyenne des prix des produits.
+db.produit.aggregate(
+    {
+        $group:
+        {
+            _id: null,
+            moyennePrix: { $avg: "$prix" }
+        }
+    }
+);
+
+// 4. Écrivez une requête qui trouve tous les produits dont la moyenne des cotes est plus
+// grande que 6 et triez-les du meilleur au moins bon.
+db.produit.aggregate([
+    {
+        $unwind : "$critiques"
+    },
+    {
+        $group:
+        {
+            _id: "$nom",
+            moyennePrix: { $avg: "$critiques.cote" }
+        }
+    },
+
+    {
+        $match: { moyennePrix:{$gt: 6} }
+    },
+
+    {
+        $sort: { moyennePrix: -1 }
+    }
+]);
+
+
+// 5. Écrivez une requête qui affiche seulement le nom et le prix des produits qui ont reçu
+// plus de 2 critiques. Le champ nom doit être renommé en « Produit » à l’affichage.
+db.produit.aggregate([
+    {
+        $unwind : "$critiques"
+    },
+    
+    {
+        $group:
+        {
+            _id: "$nom",
+            compte: { $sum: 1 }
+        }
+    },
+
+    {
+        $match:
+        {
+            compte : {$gt: 2}            
+        }
+    }
+]);

@@ -1,0 +1,195 @@
+////////////////////////////////////////////////
+//                                            //
+//            REQUÊTES KRISTOPHER             //
+//                                            //
+////////////////////////////////////////////////
+
+
+// 3. Afficher toutes les cotes IMDB plus grandes ou égales à 9 en ordre décroissant. Le titre du film doit être affiché à côté de la cote (3pts)
+
+use("tp1")
+db.films.aggregate
+(
+    {
+        $match: {"imdb.rating": {$gte : 9}}
+    },
+
+    {
+        $sort: {"imdb.rating": -1}
+    },
+
+    {
+        $project: {"_id": 0, "titre": "$title", "rating": "$imdb.rating"}
+    }
+).toArray();
+
+// 4. Afficher les titres des films avec une appréciation : « Excellent » lorsque la cote moyenne Tomatoes - critic et viewer d’un film est supérieure à 8 , « Bien » lorsque
+// la cote moyenne est entre 6 et 8 et « Bof » pour le reste. Faites attention aux films qui n’ont pas de cote : vous devrez afficher « N/A » comme appréciation.
+// Si un film n’a que l’une des deux cotes, ne considérer que cette dernière. (6pts)
+
+use("tp1")
+db.films.aggregate
+([
+    {
+        $project:
+        {
+             "_id": 0,
+            "titre": "$title",
+            "moyenne":{$avg: ["$tomatoes.viewer.rating", "$tomatoes.critic.rating"]}
+        }
+    },
+
+    {
+        $project:
+        {
+            "_id": 0,
+            "titre": 1,
+            "appreciation": 
+            {
+                $switch:
+                {
+                    branches:
+                    [
+                        {
+                            case: {$gt: ["$moyenne", 8]}, then: "Excellent"
+                        },
+
+                        {
+                            case: {$and: [{$gte: ["$moyenne", 6] }, { $lte: ["$moyenne", 8] } ] }, then: "Bien"
+                        },
+
+                        {
+                            case: {$and: [{$gte: ["$moyenne", 0] }, { $lt: ["$moyenne", 6] } ] }, then: "Bof"
+                        }
+                    ],
+                    default: "N/A"
+                }
+            }
+        }
+    }
+]).toArray();
+
+
+// 5. Afficher les 3 films qui ont gagné le plus de prix (awards) avec leur titre et le nom de leurs directeurs (5pts)
+use("tp1")
+db.films.aggregate([
+    {
+        $project:
+        {
+            "_id": 0,
+            "titre": "$title",
+            "prix": "$awards.wins",
+            "directeurs": "$directors"
+        }
+    },
+    {
+        $group:
+        {
+            "_id": "$titre",
+            "prix": {$last: "$prix"},
+            "directeurs": {$last: "$directeurs"}
+        }
+    },
+    {
+         $sort: {"prix": -1}
+    },
+    {
+        $limit: 3
+    }
+]);
+
+
+////////////////////////////////////////////////
+//                                            //
+//             REQUÊTES GABRIEL               //
+//                                            //
+////////////////////////////////////////////////
+
+// 1.	Afficher tous les films dans lesquels joue Lillian Gish avec les commentaires sur les films (3pts)
+use("tp1");
+db.films.aggregate([
+    {
+        $unwind: "$cast"
+    },
+    {
+        $match:
+        {
+            cast: "Lillian Gish"
+        }
+    },
+    {
+        $lookup:
+        {
+            from: "commentaires",
+            localField: "_id",
+            foreignField: "movie_id",
+            as: "comments"
+        }
+    },
+    {
+        $project:
+        {
+            "_id": 0,
+            "titre": "$title",
+            "commentaires": "$comments.text"
+        }
+    }
+]).toArray();
+
+
+// 2.	Afficher l’acteur qui a joué dans le plus de films (5pts)
+use("tp1");
+db.films.aggregate([
+    {
+        $unwind: "$cast"
+    },
+    {
+        $group:
+        {
+            _id: "$cast",
+            nombreFilm: {$sum: 1}
+        }
+    },
+    {
+        $sort:
+        {
+            nombreFilm: -1
+        }
+    },
+    {
+        $limit: 1
+    }
+]).toArray();
+
+
+// 6.	Afficher le film qui a la plus haute cote Tomatoes - viewer pour chaque genre de film en affichant aussi sa cote.
+// On vérifiera seulement les films qui ont reçu plus de 2000 avis de spectateurs (viewers) (6pts)
+use("tp1");
+db.films.aggregate([
+    {
+        $match: {"tomatoes.viewer.numReviews": {$gt: 2000}}
+    },
+    {
+        $unwind: "$genres"
+    },
+    {
+        $group:
+        {
+            _id: "$genres",
+            titre: {$first: "$title"},
+            filmMeilleurCote: {$max: "$tomatoes.viewer.rating"}
+        }
+    },
+    {
+        $project:
+        {
+            _id: 0,
+            "genre": "$_id",
+            "titre": "$titre",
+            "cote": "$filmMeilleurCote"
+        }
+    },
+    {
+        $sort:{"cote": 1}
+    }
+]).toArray();

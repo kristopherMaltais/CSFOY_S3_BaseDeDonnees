@@ -1,0 +1,223 @@
+////////////////////////////////
+//          PARTIE 1          //
+////////////////////////////////
+
+
+// Créer une base de données
+const database = 'lookup';
+use(database);
+
+
+// Créer deux collections
+db.createCollection('continentCode');
+db.createCollection('countryCodeLookup');
+
+// Insérer des données dans les deux collections
+db.continentCode.insertMany([
+    {code: 1},
+    {code: 20},
+    {code: 30}
+]);
+
+db.countryCodeLookup.insertMany([
+    {code: 1, name: "united States"},
+    {code: 20, name: "Egypt"},
+    {code: 30, name: "Greece"},
+    {code: 1, name: "Canada"}
+]);
+
+// Faire afficher la liste des pays par code (Assurez-vous de n'afficher que le code et le pays)
+db.continentCode.aggregate([
+    {
+        $lookup:
+        {
+            from: "countryCodeLookup",
+            localField: "code",
+            foreignField: "code",
+            as: "Pays_continent"
+        }
+    }
+]);
+
+
+// Jointures - Plusieurs à plusieurs
+
+// Ajouter 3 collection
+
+// Créer deux collections
+db.createCollection('person');
+db.createCollection('phone');
+db.createCollection('personPhone');
+
+// Ajouter des enregistrements dans les collections
+db.person.insertMany([
+    {_id: 1, LastName: "Clifton", FirstName: "Marc"},
+    {_id: 2, LastName: "Wagers", FirstName: "Kelli"}
+]);
+
+db.phone.insertMany([
+    {_id: 1, number: "518-555-1212"},
+    {_id: 2, number: "518-123-4567"}
+]);
+
+
+db.personPhone.insertMany([
+    {_id: 1, PersonID: 1, PhoneID: 1},
+    {_id: 2, PersonID: 2, PhoneID: 1},
+    {_id: 3, PersonID: 2, PhoneID: 2}
+]);
+
+// Afficher les personnes avec leurs numéros de téléphone
+db.personPhone.aggregate([
+    {
+        $lookup:
+        {
+            from: "person",
+            localField: "PersonID",
+            foreignField: "_id",
+            as: "person"
+        }
+    },
+
+    {
+        $lookup:
+        {
+            from: "phone",
+            localField: "PhoneID",
+            foreignField: "_id",
+            as: "phone"
+        },
+    },
+    {
+        $unwind: "$person"
+    },
+
+    {
+        $project:
+        {
+            "_id": 0,
+            "nom": "$person.FirstName",
+            "telephone": "$phone.number"
+        }
+    }
+]);
+
+////////////////////////////////
+//          PARTIE 2          //
+////////////////////////////////
+
+// 1. Écrivez une requête qui affiche les restaurants 6 à 10 du Bronx (« borough »).
+use("dbrestos");
+db.restaurants.find({"borough": /[Bb]ronx/}).skip(6).limit(4);
+
+// 2. Écrivez une requête qui affiche les restaurants qui n’offre pas de cuisine 'American', dont le    (********)
+// score est de plus de 70 et dont la latitude est moins que -65.754.
+use("dbrestos");
+db.restaurants.find({"cuisine": {$not: {$regex : /American/}}, "address.coord": {$lt : -65.754}})
+db.restaurants.aggregate
+([
+    {
+        $unwind: "$address.coord"
+    },
+    {
+        $match: {"cuisine": {$not: {$regex : /American/}}, "address.coord": {$lt : -65.754}}
+    },
+
+    {
+        $unwind: "$grades"
+    },
+
+    {
+        $group:
+        {
+            "_id": "$restaurant_id",
+            "latitude": {$first: "$address.coord"},
+            "cuisine": {$first: "$cuisine"},
+            "score": { $sum: "$grades.score"}
+        }
+    },
+
+    {
+        $match:{"score": {$gt: 70}}
+    }
+
+]);
+
+
+// 3. Écrivez une requête qui affiche le Id, nom, quartier et cuisine pour les restaurants dont le
+// nom se termine par 'ces'.
+use("dbrestos");
+db.restaurants.aggregate
+([
+    {
+        $match: {"name": {$regex : /ces$/}}
+    },
+
+    {
+        $project: {"_id": 1, "name": 1, "borough": 1, "cuisine": 1}
+    }
+]);
+
+
+
+// 4. Écrivez une requête qui affiche le Id, nom, quartier et cuisine pour les restaurants qui ne
+// sont pas à Staten Island, dans le Queens ou à Brooklyn.
+use("dbrestos");
+db.restaurants.aggregate(
+    {
+        $match: { "borough": {$nin: [/Staten/, /Queens/, /Brooklyn/]}}
+    },
+
+    {
+        $project:{"_id": 1, "name": 1, "borough": 1}
+    }
+
+);
+
+// 5. Écrivez une requête qui trie les types de cuisine en ordre ascendant et
+// qui trie ensuite en ordre descendant de quartiers.
+use("dbrestos");
+db.restaurants.aggregate(
+    {
+        $sort: {"cuisine": 1, "borough": -1}
+    }
+);
+
+
+// 6. Écrivez une requête qui affiche le Id et le nom des restaurants avec un champ                (*******)
+// supplémentaire qui affiche si le type de cuisine est spécifié ou non pour ce restaurant.
+use("dbrestos");
+db.restaurants.aggregate([
+    {
+        $project: {"_id": 1, "name": 1}
+    },
+
+    {
+        $addFields:
+        {
+            "cuisine":{ $cond: [{"name": {$eq: "yep"}}, "yes", "no"]}
+        }
+    }
+]);
+
+
+// 7. Écrivez une requête qui affiche le Id, nom et “grades” pour les restaurants dont le score est (*******)
+// un multiple de 7
+
+// 8. Écrivez une requête qui affiche le nom, le quartier, la longitude et la latitude pour les
+// restaurants qui contiennent les lettres 'mon' quelque part dans leur nom (faites attention à
+// ce que la casse n’importe pas).
+use("dbrestos");
+db.restaurants.aggregate([
+    {
+        $match: {"name": /[mM]on/}
+    },
+
+    {
+        $project: {"_id": 0, "name": 1, "borough": 1, "address.coord": 1}
+    }
+]);
+
+// 9. Écrivez une requête qui affiche le nombre de restaurants de Brooklyn.
+use("dbrestos");
+db.restaurants.find({"borough": /[bB]rooklyn/}).count();
